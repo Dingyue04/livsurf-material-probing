@@ -1,0 +1,125 @@
+diff --git a/launch/moveit.launch.py b/launch/moveit.launch.py
+--- a/launch/moveit.launch.py
++++ b/launch/moveit.launch.py
+@@ -126,6 +126,10 @@ def generate_launch_description():
+     joint_limits_yaml = load_yaml(
+         'franka_fr3_moveit_config', 'config/fr3_joint_limits.yaml'
+     )
++    pilz_cartesian_limits_yaml = load_yaml(
++        'franka_fr3_moveit_config', 'config/pilz_cartesian_limits.yaml'
++    )
++    joint_limits_yaml.update(pilz_cartesian_limits_yaml)
+ 
+     joint_limits_config = {
+         'robot_description_planning': joint_limits_yaml
+@@ -154,4 +158,18 @@ def generate_launch_description():
+     )
+     ompl_planning_pipeline_config['move_group'].update(ompl_planning_yaml)
+ 
++    pilz_planning_pipeline_config = {
++        'pilz_industrial_motion_planner': load_yaml(
++            'franka_fr3_moveit_config',
++            'config/pilz_industrial_motion_planner_planning.yaml',
++        )
++    }
++    planning_pipelines_config = {
++        'planning_pipelines': [
++            'move_group',
++            'pilz_industrial_motion_planner',
++        ],
++        'default_planning_pipeline': 'move_group',
++    }
++
+     # Trajectory Execution Functionality
+@@ -190,4 +208,6 @@ def generate_launch_description():
+             kinematics_config,
+             joint_limits_config,
+             ompl_planning_pipeline_config,
++            pilz_planning_pipeline_config,
++            planning_pipelines_config,
+             trajectory_execution,
+@@ -211,4 +231,7 @@ def generate_launch_description():
+             robot_description,
+             robot_description_semantic,
+             ompl_planning_pipeline_config,
++            pilz_planning_pipeline_config,
++            planning_pipelines_config,
++            joint_limits_config,
+             kinematics_config,
+diff --git a/launch/move_group.launch.py b/launch/move_group.launch.py
+--- a/launch/move_group.launch.py
++++ b/launch/move_group.launch.py
+@@ -108,5 +108,9 @@ def generate_robot_nodes(context, *args, **kwargs):
+     joint_limits_yaml = load_yaml(
+         'franka_fr3_moveit_config', 'config/fr3_joint_limits.yaml', prefix_str
+     )
++    pilz_cartesian_limits_yaml = load_yaml(
++        'franka_fr3_moveit_config', 'config/pilz_cartesian_limits.yaml'
++    )
++    joint_limits_yaml.update(pilz_cartesian_limits_yaml)
+ 
+     joint_limits_config = {
+@@ -136,4 +140,18 @@ def generate_robot_nodes(context, *args, **kwargs):
+     )
+     ompl_planning_pipeline_config['move_group'].update(ompl_planning_yaml)
+ 
++    pilz_planning_pipeline_config = {
++        'pilz_industrial_motion_planner': load_yaml(
++            'franka_fr3_moveit_config',
++            'config/pilz_industrial_motion_planner_planning.yaml',
++        )
++    }
++    planning_pipelines_config = {
++        'planning_pipelines': [
++            'move_group',
++            'pilz_industrial_motion_planner',
++        ],
++        'default_planning_pipeline': 'move_group',
++    }
++
+     moveit_simple_controllers_yaml = load_yaml(
+@@ -169,4 +187,6 @@ def generate_robot_nodes(context, *args, **kwargs):
+             kinematics_config,
+             joint_limits_config,
+             ompl_planning_pipeline_config,
++            pilz_planning_pipeline_config,
++            planning_pipelines_config,
+             trajectory_execution,
+diff --git a/package.xml b/package.xml
+--- a/package.xml
++++ b/package.xml
+@@ -20,4 +20,5 @@
+   <exec_depend>moveit_ros_move_group</exec_depend>
+   <exec_depend>moveit_kinematics</exec_depend>
+   <exec_depend>moveit_planners_ompl</exec_depend>
++  <exec_depend>pilz_industrial_motion_planner</exec_depend>
+   <exec_depend>moveit_ros_visualization</exec_depend>
+diff --git a/config/pilz_cartesian_limits.yaml b/config/pilz_cartesian_limits.yaml
+new file mode 100644
+--- /dev/null
++++ b/config/pilz_cartesian_limits.yaml
+@@ -0,0 +1,5 @@
++cartesian_limits:
++  max_trans_vel: 0.10
++  max_trans_acc: 0.50
++  max_trans_dec: -0.50
++  max_rot_vel: 2.0
+diff --git a/config/pilz_industrial_motion_planner_planning.yaml b/config/pilz_industrial_motion_planner_planning.yaml
+new file mode 100644
+--- /dev/null
++++ b/config/pilz_industrial_motion_planner_planning.yaml
+@@ -0,0 +1,14 @@
++planning_plugins:
++  - pilz_industrial_motion_planner/CommandPlanner
++default_planner_config: PTP
++request_adapters:
++  - default_planning_request_adapters/ResolveConstraintFrames
++  - default_planning_request_adapters/ValidateWorkspaceBounds
++  - default_planning_request_adapters/CheckStartStateBounds
++  - default_planning_request_adapters/CheckStartStateCollision
++response_adapters:
++  - default_planning_response_adapters/ValidateSolution
++  - default_planning_response_adapters/DisplayMotionPath
++capabilities: >-
++  pilz_industrial_motion_planner/MoveGroupSequenceAction
++  pilz_industrial_motion_planner/MoveGroupSequenceService
